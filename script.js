@@ -17,6 +17,36 @@ document.addEventListener('keydown', (event) => {
     }
 });
 
+// Lemniscate curve class definition
+class LemniscateCurve {
+    constructor(scale, majorRadius) {
+        this.a = scale;
+        this.R = majorRadius;
+    }
+
+    calculatePoint(t, rotation, vertical = false) {
+        const denominator = 1 + Math.sin(t) * Math.sin(t);
+        const x = (this.a * Math.cos(t)) / denominator;
+        const y = (this.a * Math.sin(t) * Math.cos(t)) / denominator;
+        const angle = (rotation * Math.PI) / 180;
+
+        if (vertical) {
+            const rotatedX = x * Math.cos(angle) + this.R;
+            const rotatedY = x * Math.sin(angle);
+            return new THREE.Vector3(rotatedX, rotatedY, y);
+        } else {
+            const rotatedX = x * Math.cos(angle) + this.R;
+            const rotatedZ = x * Math.sin(angle);
+            return new THREE.Vector3(rotatedX, y, rotatedZ);
+        }
+    }
+
+    isValidPoint(point) {
+        return !isNaN(point.x) && !isNaN(point.y) && !isNaN(point.z) &&
+               isFinite(point.x) && isFinite(point.y) && isFinite(point.z);
+    }
+}
+
 // Wait for the DOM and modules to load
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize the scene, camera, and renderer
@@ -149,52 +179,49 @@ document.addEventListener('DOMContentLoaded', function() {
     const verticalWireframeTorus = new THREE.Mesh(verticalGeometry, orangeWireframeMaterial);
     const verticalSolidTorus = new THREE.Mesh(verticalGeometry.clone(), orangeSolidMaterial);
 
-    // A tóruszok kezdetben ne legyenek láthatóak
+    // Gömb létrehozása ugyanolyan anyagokkal
+    const sphereGeometry = new THREE.SphereGeometry(20, 64, 64); // A sugár 20 egység
+    const sphereWireframe = new THREE.Mesh(sphereGeometry, greenWireframeMaterial.clone());
+    const sphereSolid = new THREE.Mesh(sphereGeometry.clone(), greenSolidMaterial.clone());
+    
+    // Pozícionálás a tórusz középpontjába
+    sphereWireframe.position.set(10, 0, 0);
+    sphereSolid.position.set(10, 0, 0);
+
+    // A tóruszok és gömbök kezdetben ne legyenek láthatóak
     horizontalWireframeTorus.visible = false;
     horizontalSolidTorus.visible = false;
     verticalWireframeTorus.visible = false;
     verticalSolidTorus.visible = false;
+    sphereWireframe.visible = false;
+    sphereSolid.visible = false;
 
+    // Objektumok hozzáadása a jelenethez
     scene.add(horizontalWireframeTorus);
     scene.add(horizontalSolidTorus);
     scene.add(verticalWireframeTorus);
     scene.add(verticalSolidTorus);
-
-    // Lemniscate curve class definition
-    class LemniscateCurve {
-        constructor(scale, majorRadius) {
-            this.a = scale;
-            this.R = majorRadius;
-        }
-
-        calculatePoint(t, rotation, vertical = false) {
-            const denominator = 1 + Math.sin(t) * Math.sin(t);
-            const x = (this.a * Math.cos(t)) / denominator;
-            const y = (this.a * Math.sin(t) * Math.cos(t)) / denominator;
-            const angle = (rotation * Math.PI) / 180;
-
-            if (vertical) {
-                const rotatedX = x * Math.cos(angle) + this.R;
-                const rotatedY = x * Math.sin(angle);
-                return new THREE.Vector3(rotatedX, rotatedY, y);
-            } else {
-                const rotatedX = x * Math.cos(angle) + this.R;
-                const rotatedZ = x * Math.sin(angle);
-                return new THREE.Vector3(rotatedX, y, rotatedZ);
-            }
-        }
-
-        isValidPoint(point) {
-            return !isNaN(point.x) && !isNaN(point.y) && !isNaN(point.z) &&
-                   isFinite(point.x) && isFinite(point.y) && isFinite(point.z);
-        }
-    }
+    scene.add(sphereWireframe);
+    scene.add(sphereSolid);
 
     // Initialize curve parameters
     const lemniscate = new LemniscateCurve(20, 10);
     const numRotations = 18;
 
-    // Materials
+    // Initialize animation state
+    let currentRotation = 0;
+    let currentT = -Math.PI/2;
+    let isVertical = false;
+    const horizontalCurves = [];
+    const verticalCurves = [];
+    let tempPoints = [];
+
+    // Animation parameters
+    const mainStepSize = 0.2;
+    const subSteps = 8;
+    const subStepSize = mainStepSize / (subSteps + 1);
+
+    // Materials for curves
     const horizontalLineMaterial = new THREE.LineBasicMaterial({ 
         color: 0x00ff00,
         linewidth: 2
@@ -216,19 +243,6 @@ document.addEventListener('DOMContentLoaded', function() {
     pointGeometry.setAttribute('position', new THREE.Float32BufferAttribute(pointPositions, 3));
     const movingPoint = new THREE.Points(pointGeometry, pointMaterial);
     scene.add(movingPoint);
-
-    // Animation state
-    let currentRotation = 0;
-    let currentT = -Math.PI/2;
-    let isVertical = false;
-    const horizontalCurves = [];
-    const verticalCurves = [];
-    let tempPoints = [];
-
-    // Animation parameters
-    const mainStepSize = 0.2;
-    const subSteps = 8;
-    const subStepSize = mainStepSize / (subSteps + 1);
 
     // Function to update point position
     function updatePointPosition(point) {
@@ -287,6 +301,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         horizontalCurves.forEach(curve => scene.remove(curve));
                         horizontalWireframeTorus.visible = true;
                         horizontalSolidTorus.visible = true;
+                        sphereWireframe.visible = true;
+                        sphereSolid.visible = true;
                         
                         isVertical = true;
                         currentRotation = 0;
