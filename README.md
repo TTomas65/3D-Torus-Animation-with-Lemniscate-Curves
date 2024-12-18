@@ -1,7 +1,9 @@
 # 3D Torus Animation with Lemniscate Curves
 
 This project demonstrates an interactive 3D animation of lemniscate curves arranged in a torus-like pattern. The animation is created using Three.js and features both horizontal and vertical curve patterns that form a complex 3D structure.
+![Running image](Images/Running_image01d.jpg)
 
+Demo: https://tangerine-rolypoly-87398f.netlify.app/
 ## Features
 
 - Real-time 3D animation of lemniscate curves
