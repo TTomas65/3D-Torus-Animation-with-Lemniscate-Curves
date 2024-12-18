@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
     scene.add(directionalLight);
 
     // Lemniszkáta alapú tórusz létrehozása
-    function createLemniscateTorusGeometry(scale, majorRadius, segments, rings) {
+    function createLemniscateTorusGeometry(scale, majorRadius, segments, rings, isVertical = false) {
         const vertices = [];
         const indices = [];
         const uvs = [];
@@ -74,10 +74,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 const y = (scale * Math.sin(t) * Math.cos(t)) / denominator;
                 
                 // Pont forgatása a tórusz körül
-                const rotatedX = x * Math.cos(rotation) + majorRadius;
-                const rotatedZ = x * Math.sin(rotation);
+                if (isVertical) {
+                    const rotatedX = x * Math.cos(rotation) + majorRadius;
+                    const rotatedY = x * Math.sin(rotation);
+                    vertices.push(rotatedX, rotatedY, y);
+                } else {
+                    const rotatedX = x * Math.cos(rotation) + majorRadius;
+                    const rotatedZ = x * Math.sin(rotation);
+                    vertices.push(rotatedX, y, rotatedZ);
+                }
                 
-                vertices.push(rotatedX, y, rotatedZ);
                 uvs.push(segment / segments, ring / rings);
             }
         }
@@ -102,11 +108,12 @@ document.addEventListener('DOMContentLoaded', function() {
         return geometry;
     }
 
-    // Lemniszkáta tórusz létrehozása
-    const lemniscateGeometry = createLemniscateTorusGeometry(20, 10, 64, 64);
+    // Horizontális és vertikális tóruszok létrehozása
+    const horizontalGeometry = createLemniscateTorusGeometry(20, 10, 64, 64, false);
+    const verticalGeometry = createLemniscateTorusGeometry(20, 10, 64, 64, true);
     
     // Anyagok létrehozása
-    const wireframeMaterial = new THREE.MeshPhongMaterial({
+    const greenWireframeMaterial = new THREE.MeshPhongMaterial({
         color: 0x00ff00,
         wireframe: true,
         transparent: true,
@@ -114,22 +121,44 @@ document.addEventListener('DOMContentLoaded', function() {
         side: THREE.DoubleSide
     });
     
-    const solidMaterial = new THREE.MeshPhongMaterial({
+    const greenSolidMaterial = new THREE.MeshPhongMaterial({
         color: 0x00ff00,
         transparent: true,
         opacity: 0.2,
         side: THREE.DoubleSide
     });
 
-    // Két tórusz létrehozása
-    const wireframeTorus = new THREE.Mesh(lemniscateGeometry, wireframeMaterial);
-    const solidTorus = new THREE.Mesh(lemniscateGeometry.clone(), solidMaterial);
+    const orangeWireframeMaterial = new THREE.MeshPhongMaterial({
+        color: 0xffd200,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.5,
+        side: THREE.DoubleSide
+    });
+    
+    const orangeSolidMaterial = new THREE.MeshPhongMaterial({
+        color: 0xffd200,
+        transparent: true,
+        opacity: 0.2,
+        side: THREE.DoubleSide
+    });
+
+    // Tóruszok létrehozása
+    const horizontalWireframeTorus = new THREE.Mesh(horizontalGeometry, greenWireframeMaterial);
+    const horizontalSolidTorus = new THREE.Mesh(horizontalGeometry.clone(), greenSolidMaterial);
+    const verticalWireframeTorus = new THREE.Mesh(verticalGeometry, orangeWireframeMaterial);
+    const verticalSolidTorus = new THREE.Mesh(verticalGeometry.clone(), orangeSolidMaterial);
 
     // A tóruszok kezdetben ne legyenek láthatóak
-    wireframeTorus.visible = false;
-    solidTorus.visible = false;
-    scene.add(wireframeTorus);
-    scene.add(solidTorus);
+    horizontalWireframeTorus.visible = false;
+    horizontalSolidTorus.visible = false;
+    verticalWireframeTorus.visible = false;
+    verticalSolidTorus.visible = false;
+
+    scene.add(horizontalWireframeTorus);
+    scene.add(horizontalSolidTorus);
+    scene.add(verticalWireframeTorus);
+    scene.add(verticalSolidTorus);
 
     // Lemniscate curve class definition
     class LemniscateCurve {
@@ -252,15 +281,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentRotation++;
                 tempPoints = [];
                 
-                if (currentRotation >= numRotations && !isVertical) {
-                    // Ha a zöld lemniszkáták kirajzolása befejeződött
-                    horizontalCurves.forEach(curve => scene.remove(curve));
-                    wireframeTorus.visible = true;
-                    solidTorus.visible = true;
-                    
-                    isVertical = true;
-                    currentRotation = 0;
-                    currentT = -Math.PI/2;
+                if (currentRotation >= numRotations) {
+                    if (!isVertical) {
+                        // Ha a zöld lemniszkáták kirajzolása befejeződött
+                        horizontalCurves.forEach(curve => scene.remove(curve));
+                        horizontalWireframeTorus.visible = true;
+                        horizontalSolidTorus.visible = true;
+                        
+                        isVertical = true;
+                        currentRotation = 0;
+                        currentT = -Math.PI/2;
+                    } else {
+                        // Ha a narancssárga lemniszkáták kirajzolása befejeződött
+                        verticalCurves.forEach(curve => scene.remove(curve));
+                        verticalWireframeTorus.visible = true;
+                        verticalSolidTorus.visible = true;
+                    }
                 }
             }
         }
