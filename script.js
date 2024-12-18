@@ -55,6 +55,82 @@ document.addEventListener('DOMContentLoaded', function() {
     directionalLight.position.set(10, 20, 30);
     scene.add(directionalLight);
 
+    // Lemniszkáta alapú tórusz létrehozása
+    function createLemniscateTorusGeometry(scale, majorRadius, segments, rings) {
+        const vertices = [];
+        const indices = [];
+        const uvs = [];
+
+        // Pontok generálása a lemniszkáta egyenletek alapján
+        for (let ring = 0; ring <= rings; ring++) {
+            const rotation = (ring / rings) * Math.PI * 2;
+            
+            for (let segment = 0; segment <= segments; segment++) {
+                const t = (segment / segments) * Math.PI * 2 - Math.PI;
+                
+                // Lemniszkáta pont számítása
+                const denominator = 1 + Math.sin(t) * Math.sin(t);
+                const x = (scale * Math.cos(t)) / denominator;
+                const y = (scale * Math.sin(t) * Math.cos(t)) / denominator;
+                
+                // Pont forgatása a tórusz körül
+                const rotatedX = x * Math.cos(rotation) + majorRadius;
+                const rotatedZ = x * Math.sin(rotation);
+                
+                vertices.push(rotatedX, y, rotatedZ);
+                uvs.push(segment / segments, ring / rings);
+            }
+        }
+
+        // Háromszögek létrehozása
+        for (let ring = 0; ring < rings; ring++) {
+            for (let segment = 0; segment < segments; segment++) {
+                const current = ring * (segments + 1) + segment;
+                const next = current + segments + 1;
+
+                indices.push(current, next, current + 1);
+                indices.push(current + 1, next, next + 1);
+            }
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+        geometry.setIndex(indices);
+        geometry.computeVertexNormals();
+
+        return geometry;
+    }
+
+    // Lemniszkáta tórusz létrehozása
+    const lemniscateGeometry = createLemniscateTorusGeometry(20, 10, 64, 64);
+    
+    // Anyagok létrehozása
+    const wireframeMaterial = new THREE.MeshPhongMaterial({
+        color: 0x00ff00,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.5,
+        side: THREE.DoubleSide
+    });
+    
+    const solidMaterial = new THREE.MeshPhongMaterial({
+        color: 0x00ff00,
+        transparent: true,
+        opacity: 0.2,
+        side: THREE.DoubleSide
+    });
+
+    // Két tórusz létrehozása
+    const wireframeTorus = new THREE.Mesh(lemniscateGeometry, wireframeMaterial);
+    const solidTorus = new THREE.Mesh(lemniscateGeometry.clone(), solidMaterial);
+
+    // A tóruszok kezdetben ne legyenek láthatóak
+    wireframeTorus.visible = false;
+    solidTorus.visible = false;
+    scene.add(wireframeTorus);
+    scene.add(solidTorus);
+
     // Lemniscate curve class definition
     class LemniscateCurve {
         constructor(scale, majorRadius) {
@@ -177,6 +253,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 tempPoints = [];
                 
                 if (currentRotation >= numRotations && !isVertical) {
+                    // Ha a zöld lemniszkáták kirajzolása befejeződött
+                    horizontalCurves.forEach(curve => scene.remove(curve));
+                    wireframeTorus.visible = true;
+                    solidTorus.visible = true;
+                    
                     isVertical = true;
                     currentRotation = 0;
                     currentT = -Math.PI/2;
