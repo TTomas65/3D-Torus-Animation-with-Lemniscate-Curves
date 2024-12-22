@@ -301,8 +301,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         horizontalCurves.forEach(curve => scene.remove(curve));
                         horizontalWireframeTorus.visible = true;
                         horizontalSolidTorus.visible = true;
-                        sphereWireframe.visible = true;
-                        sphereSolid.visible = true;
                         
                         isVertical = true;
                         currentRotation = 0;
